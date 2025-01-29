@@ -6,18 +6,26 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class GitCloneController {
+public class CloneController {
 
     @Autowired
-    private GitCloneService gitCloneService;
+    private CloneGitService gitCloneService;
+
+    @Autowired
+    private CloneBitbucketService CloneBitbucketService;
 
     @Autowired
     private MavenExecutorService mavenExecutorService;
 
     // Endpoint to clone the repository
-    @GetMapping("/clone-repo")
-    public String cloneRepository() {
+    @GetMapping("/clone-git")
+    public String cloneGitRepository() {
         return gitCloneService.cloneRepository();
+    }
+
+    @GetMapping("/clone-bitbucket")
+    public String cloneRepository() {
+        return CloneBitbucketService.cloneRepository();
     }
 
     // Endpoint to execute Maven build after cloning

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 
 @Service
-public class GitCloneService {
+public class CloneGitService {
 
     // Git repository URL and the directory to clone the repository
     @Value("${git.repo.url}")
