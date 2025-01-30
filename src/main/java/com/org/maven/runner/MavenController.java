@@ -21,12 +21,18 @@ import java.util.Map;
 @Slf4j
 public class MavenController {
 
-    @PostMapping("/build")
-    public String buildProject(@RequestParam String projectPath) {
-        return runMavenCommand(projectPath, "clean install");
+    @PostMapping("/buildWithEnv")
+    public String buildProject(@RequestParam String projectPath, @RequestParam String mavenGoals) {
+        return runMavenCommand(projectPath, mavenGoals);
     }
 
-    private String runMavenCommand(String projectPath, String goals) {
+
+    @PostMapping("/build")
+    public String buildProject(@RequestParam String projectPath) {
+        return runMavenbuildProjectCommand(projectPath, "clean install");
+    }
+
+    private String runMavenbuildProjectCommand(String projectPath, String goals) {
         try {
             File projectDir = new File(projectPath);
 
@@ -120,6 +126,86 @@ public class MavenController {
             return "Error executing Maven: " + e.getMessage();
         }
     }
+
+    private String runMavenCommand(String projectPath, String goals) {
+        try {
+            File projectDir = new File(projectPath);
+
+            // Validate project path and pom.xml existence
+            if (!projectDir.exists() || !new File(projectDir, "pom.xml").exists()) {
+                return "Invalid project path or pom.xml not found!";
+            }
+
+            // Detect OS and choose the correct Maven Wrapper
+            boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+            String mvnWrapper = isWindows ? "mvnw.cmd" : "./mvnw";
+            File mvnWrapperFile = new File(projectDir, mvnWrapper);
+
+            // Check if Maven wrapper exists
+            if (!mvnWrapperFile.exists()) {
+                return "Maven Wrapper (mvnw) not found in the cloned repository!";
+            }
+
+            // Build the command
+            List<String> command = new ArrayList<>();
+            if (isWindows) {
+                command.add("cmd.exe");
+                command.add("/c");
+                command.add(mvnWrapperFile.getAbsolutePath());
+            } else {
+                command.add("bash");
+                command.add("-c");
+                command.add(mvnWrapperFile.getAbsolutePath());
+            }
+
+            // Split goals and add them to the command list
+            String[] goalArray = goals.split(" ");
+            command.addAll(Arrays.asList(goalArray));
+
+            // Prepare the ProcessBuilder
+            ProcessBuilder builder = new ProcessBuilder(command);
+            builder.directory(projectDir);
+
+            // Set JAVA_HOME
+            Map<String, String> env = builder.environment();
+            String javaHome = System.getenv("JAVA_HOME");
+            if (javaHome == null || javaHome.isEmpty()) {
+                javaHome = "C:\\Program Files\\Microsoft\\jdk-17.0.12.7-hotspot"; // Fallback path
+            }
+            if (!new File(javaHome).isDirectory()) {
+                return "Invalid JAVA_HOME path!";
+            }
+            env.put("JAVA_HOME", javaHome);
+
+            // Set PATH
+            String path = System.getenv("PATH");
+            if (path != null && !path.isEmpty()) {
+                env.put("PATH", path);
+            }
+
+            // Redirect output and error streams
+            builder.redirectErrorStream(true);
+            Process process = builder.start();
+
+            // Capture logs
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
+
+            // Wait for process completion
+            int exitCode = process.waitFor();
+            return exitCode == 0 ? "Maven build successful!\n" + output : "Maven build failed!\n" + output;
+
+        } catch (IOException | InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return "Error executing Maven: " + e.getMessage();
+        }
+    }
+
 
 }
 

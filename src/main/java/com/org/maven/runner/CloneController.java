@@ -29,7 +29,7 @@ public class CloneController {
     }
 
     // Endpoint to execute Maven build after cloning
-    @GetMapping("/run-maven-build")
+   // @GetMapping("/run-maven-build")
     public String runMavenBuild() {
         return mavenExecutorService.runMavenCommand("clean install");  // Or "spring-boot:run" to run the application
     }
